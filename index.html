@@ -117,6 +117,14 @@ body{font-family:'Inter',sans-serif;background:#0d1117;color:#e6edf3;min-height:
 .okbtn{flex:1;background:#00d4aa;border:none;border-radius:6px;padding:12px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:#0d1117}
 .okbtn:hover{opacity:0.85}
 .empty{text-align:center;padding:60px 20px;color:#484f58}
+
+.lock-btn{position:fixed;bottom:20px;right:20px;background:#21262d;border:1px solid #30363d;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:300;color:#8b949e}
+.lock-btn:hover{border-color:#00d4aa;color:#00d4aa}
+.readonly .star{pointer-events:none;cursor:default}
+.readonly .ebtn{display:none}
+.readonly .dbtn{display:none}
+.readonly .cinp{pointer-events:none;background:transparent;color:#8b949e}
+.readonly .addbtn{display:none}
 </style>
 </head>
 <body>
@@ -132,12 +140,14 @@ var BOOKS = [{"id": "1", "title": "How to Win Friends and Influence People", "au
 
 function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
+var EDIT_PASSWORD = "AlwaysTryhard";
 var S = {
   books: JSON.parse(JSON.stringify(BOOKS)),
   active:"all", sel:null, addOpen:false, editing:false,
   search:"", hstar:null,
   nb:{title:"",author:"",cat:"life",rating:null,comment:"",cover:"",summary:""},
-  loaded:false
+  loaded:false,
+  editMode:false
 };
 
 function openBook(id){
@@ -198,8 +208,8 @@ function starHTML(rating, pid, isNew){
     h += "<span class='star' style='color:"+(on?"#00d4aa":"#30363d")+"'"
        + " onmouseenter=\"S.hstar={p:'"+pid+"',n:"+i+"};draw()\""
        + " onmouseleave=\"S.hstar=null;draw()\"";
-    if(isNew) h += " onclick=\"S.nb.rating=S.nb.rating==="+i+"?null:"+i+";draw()\"";
-    else       h += " onclick=\"upd('"+pid+"',{rating:S.sel.rating==="+i+"?null:"+i+"})\"";
+    if(isNew && S.editMode) h += " onclick=\"S.nb.rating=S.nb.rating==="+i+"?null:"+i+";draw()\"";
+    else if(S.editMode) h += " onclick=\"upd('"+pid+"',{rating:S.sel.rating==="+i+"?null:"+i+"})\"";
     h += ">&#9733;</span>";
   }
   if(rating) h += "<span class='scount'>"+rating+"/10</span>";
@@ -225,6 +235,16 @@ function cardHTML(book, size){
 function refocusSearch(pos){
   var el = document.getElementById("srch");
   if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(e){} }
+}
+
+function toggleEdit(){
+  if(S.editMode){
+    S.editMode = false; draw();
+  } else {
+    var pw = prompt("Enter password to edit:");
+    if(pw === EDIT_PASSWORD){ S.editMode = true; draw(); }
+    else if(pw !== null){ alert("Wrong password"); }
+  }
 }
 
 function draw(){
@@ -264,7 +284,7 @@ function draw(){
     var imgEl = b.cover
       ? "<img class='mcov' src='"+esc(b.cover)+"' onerror='this.remove()'>"
       : "<div class='mcovfb' style='background:"+cat.bg+"'>"+cat.icon+"</div>";
-    modal = "<div class='ov' onclick=\"S.sel=null;S.editing=false;draw()\">"
+    modal = "<div class='ov" + (S.editMode ? "" : " readonly") + "' onclick=\"S.sel=null;S.editing=false;draw()\">"
       + "<div class='modal' onclick='event.stopPropagation()'>"
       + "<div class='mhdr'>"+imgEl
       + "<div class='mmeta'>"
@@ -332,11 +352,12 @@ function draw(){
     + "<span>|</span><a href='https://docs.google.com/spreadsheets/d/1KMGYwlKdBpUadJkVP3FZ1CjxfE3JvpBG0Pg1u_XWCr4/edit?gid=0#gid=0' target='_blank' style='color:#00d4aa;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:5px'>&#128196; Full Summary Sheet</a></span></div>"
     + "</div><div class='hdr-r'>"
     + "<input class='srch' id='srch' placeholder='Search...' value='"+esc(S.search)+"' oninput='S.search=this.value;draw();refocusSearch(this.value.length)'>"
-    + "<button class='addbtn' onclick='S.addOpen=true;draw()'>+ Add Book</button>"
+    + (S.editMode ? "<button class='addbtn' onclick='S.addOpen=true;draw()'>+ Add Book</button>" : "")
     + "</div></div>"
     + "<div class='tabs'>"+tabHTML+"</div>"
     + "<div class='content'>"+main+"</div>"
-    + modal+addModal;
+    + modal+addModal
+    + "<button class='lock-btn' onclick='toggleEdit()' title='" + (S.editMode ? "Lock editing" : "Unlock editing") + "'>" + (S.editMode ? "&#128275;" : "&#128274;") + "</button>";
 }
 
 draw();
